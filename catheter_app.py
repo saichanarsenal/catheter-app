@@ -1,55 +1,47 @@
 import streamlit as st
 
-def check_feasibility(catheter_type, unit, quantity):
-    if catheter_type == 'セルフ':
-        unit_price = 2000
-        max_price = 4000
-    elif catheter_type == 'ネラトン':
-        unit_price = 10
-        max_price = 10000
-    else:
-        return "無効なカテーテルタイプです"
+st.title("💉 自己導尿カテーテル支給シミュレーター（改良版）")
 
-    if unit == '箱':
-        if catheter_type == 'ネラトン':
-            quantity *= 50
-        else:
-            return "セルフには箱指定はできません"
+# ① カテーテルの使用パターン
+usage_pattern = st.radio(
+    "① セルフカテーテルだけですか？",
+    ("セルフカテーテルのみ", "ネラトン併用", "ネラトンのみ")
+)
 
-    cost = quantity * unit_price
-    profit = max_price - cost
+# ② 希望使用期間（月数）
+months = st.selectbox("② 何か月分希望ですか？", [1, 2, 3])
 
-    result = "可能" if profit >= 0 else "不可能"
-    return {
-        "使用カテーテル": catheter_type,
-        "数量（本）": quantity,
-        "総原価（円）": cost,
-        "点数収入（円）": max_price,
-        "利益（円）": profit,
-        "結果": result
-    }
+# 単価設定
+price_self = 2000
+price_neraton = 800
+price_bc = 800
 
-st.title("💉 自己導尿カテーテル支給シミュレーター")
-
-catheter_type = st.selectbox("カテーテルの種類を選んでください", ["セルフ", "ネラトン"])
-unit_input = st.selectbox("入力方法を選んでください", ["1日あたりの導尿回数", "月あたりの本数", "月あたりの箱数"])
-
-if unit_input == "1日あたりの導尿回数":
-    daily_count = st.number_input("1日の導尿回数", min_value=1, max_value=20, step=1)
-    quantity = daily_count * 30
-    unit = "本"
-elif unit_input == "月あたりの本数":
-    quantity = st.number_input("1ヶ月の本数", min_value=1, step=1)
-    unit = "本"
+# 支給上限額設定
+if usage_pattern == "セルフカテーテルのみ":
+    limit_per_month = 4000
 else:
-    quantity = st.number_input("1ヶ月の箱数（50本/箱）", min_value=1, step=1)
-    unit = "箱"
+    limit_per_month = 10000
+limit_total = limit_per_month * months
 
+# 入力欄（個数）
+st.markdown("#### 各物品の希望本数を入力してください（任意）")
+num_self = st.number_input("セルフカテーテル（1本 2000円）", min_value=0, step=1)
+num_neraton = st.number_input("ネラトンカテーテル（1本 800円）", min_value=0, step=1)
+num_bc = st.number_input("グリセリンBC（1本 800円）", min_value=0, step=1)
+
+# 計算
+total_cost = num_self * price_self + num_neraton * price_neraton + num_bc * price_bc
+profit = limit_total - total_cost
+feasible = profit >= 0
+status = "✅ 支給可能" if feasible else "❌ 支給不可能"
+
+# 結果表示
 if st.button("結果を表示"):
-    result = check_feasibility(catheter_type, unit, int(quantity))
-    if isinstance(result, dict):
-        st.subheader("🧾 支給判定")
-        for key, value in result.items():
-            st.write(f"**{key}**: {value}")
-    else:
-        st.error(result)
+    st.subheader("🧾 判定結果")
+    st.write(f"使用パターン: {usage_pattern}")
+    st.write(f"使用期間: {months}か月")
+    st.write(f"支給限度額: {limit_total:,} 円")
+    st.write(f"総原価: {total_cost:,} 円")
+    st.write(f"利益: {profit:,} 円")
+    st.markdown(f"### {status}")
+    
